@@ -57,9 +57,6 @@ make install PREFIX=/usr/local   # or anywhere
 cargo install --path .           # -> ~/.cargo/bin/sift
 ```
 
-Prebuilt binaries for macOS (Apple Silicon) and Linux (x86_64, arm64) are
-attached to each [release](https://github.com/jellis206/sift/releases).
-
 On a machine set up from the dotfiles, `.init.sh` clones this repo to `~/dev/sift`
 and installs it. Rebuild it after pulling with `devtools sift`.
 
@@ -70,5 +67,4 @@ cargo test                 # unit + CLI tests; fixtures pin every history locati
 cargo clippy --all-targets
 ```
 
-CI runs fmt, clippy and tests on macOS and Linux. Pushing a `v*` tag publishes a
-release with binaries.
+CI runs fmt, clippy and tests on macOS and Linux.
