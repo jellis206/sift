@@ -6,7 +6,7 @@ A fast, local-first CLI for searching your AI coding-agent prompt history
 ## Usage
 
 ```sh
-sift review pr                  # any term (case-insensitive literals)
+sift review pr                  # any term (case-insensitive, at word starts: pull ≠ napulleon)
 sift -a review pr               # every term, any order
 sift review --not draft         # exclude; repeatable, phrases work: --not "already merged"
 sift -c review                  # Claude Code only; -x Codex, -p Pi, combinable (default: all)

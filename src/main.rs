@@ -19,7 +19,7 @@ use sources::{Prompt, claude, codex, pi};
 #[derive(Parser)]
 #[command(version)]
 struct Cli {
-    /// Terms to search for: case-insensitive literals, quote multi-word terms
+    /// Terms to search for: case-insensitive, matched at word starts, quote multi-word terms
     #[arg(required = true)]
     terms: Vec<String>,
 
@@ -109,7 +109,7 @@ fn run(cli: Cli) -> Result<bool> {
         found = true;
         match &mut ranked {
             Some(top) => top.push(prompt),
-            None => output::print(&mut out, &prompt, &format)?,
+            None => output::print(&mut out, &prompt, &query, &format)?,
         }
         Ok(())
     };
@@ -126,7 +126,7 @@ fn run(cli: Cli) -> Result<bool> {
     }
 
     for prompt in ranked.map(TopK::into_sorted).unwrap_or_default() {
-        output::print(&mut out, &prompt, &format)?;
+        output::print(&mut out, &prompt, &query, &format)?;
     }
     out.flush()?;
     Ok(found)
