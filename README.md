@@ -40,14 +40,35 @@ Claude, and Codex `history.jsonl` entries that duplicate a session file.
 
 ## Privacy
 
-sift only reads local history files. It never writes to them and never sends anything over the network.
+sift only reads local history files. It never writes to them and never sends
+anything over the network. Unreadable files are reported by path only, never
+with their contents.
 
 ## Install
 
+Requires a recent stable Rust toolchain.
+
 ```sh
+cargo install --git https://github.com/jellis206/sift   # -> ~/.cargo/bin/sift
+
+# or from a checkout
 make install                     # -> ~/.local/bin/sift
 make install PREFIX=/usr/local   # or anywhere
+cargo install --path .           # -> ~/.cargo/bin/sift
 ```
+
+Prebuilt binaries for macOS (Apple Silicon) and Linux (x86_64, arm64) are
+attached to each [release](https://github.com/jellis206/sift/releases).
 
 On a machine set up from the dotfiles, `.init.sh` clones this repo to `~/dev/sift`
 and installs it. Rebuild it after pulling with `devtools sift`.
+
+## Development
+
+```sh
+cargo test                 # unit + CLI tests; fixtures pin every history location
+cargo clippy --all-targets
+```
+
+CI runs fmt, clippy and tests on macOS and Linux. Pushing a `v*` tag publishes a
+release with binaries.
