@@ -1,3 +1,80 @@
-fn main() {
-    println!("Hello, world!");
+mod output;
+mod search;
+mod sources;
+
+use std::io::{self, BufWriter, IsTerminal, Write};
+use std::process::ExitCode;
+
+use anyhow::{Context, Result};
+use clap::Parser;
+
+use search::Query;
+use sources::claude;
+
+/// Search what you've asked your coding agents.
+#[derive(Parser)]
+#[command(version)]
+struct Cli {
+    /// Terms to search for: case-insensitive literals, quote multi-word terms
+    #[arg(required = true)]
+    terms: Vec<String>,
+
+    /// Require all terms (default: any term)
+    #[arg(short = 'a', long = "and")]
+    all: bool,
+
+    /// Search Claude Code history
+    #[arg(short, long)]
+    claude: bool,
+
+    /// Exclude prompts containing TERM (repeatable)
+    #[arg(long = "not", value_name = "TERM")]
+    exclude: Vec<String>,
+
+    /// Disable ANSI colors (also off when piped or NO_COLOR is set)
+    #[arg(long)]
+    no_color: bool,
+}
+
+/// grep-style exit codes: 0 matched, 1 no match, 2 error.
+fn main() -> ExitCode {
+    match run(Cli::parse()) {
+        Ok(true) => ExitCode::SUCCESS,
+        Ok(false) => ExitCode::from(1),
+        // `sift … | head` closing the pipe is a normal way to stop.
+        Err(e) if is_broken_pipe(&e) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("sift: {e:#}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn run(cli: Cli) -> Result<bool> {
+    let query = Query::new(&cli.terms, &cli.exclude, cli.all);
+    let color =
+        !cli.no_color && std::env::var_os("NO_COLOR").is_none() && io::stdout().is_terminal();
+    let mut out = BufWriter::new(io::stdout().lock());
+    let mut found = false;
+
+    // Missing histories are skipped: not every machine has every agent.
+    if let Some(path) = claude::history_path().filter(|p| p.exists()) {
+        claude::scan(&path, &mut |prompt| {
+            if query.matches(&prompt.text) {
+                found = true;
+                output::print(&mut out, &prompt, color)?;
+            }
+            Ok(())
+        })
+        .with_context(|| format!("reading {}", path.display()))?;
+    }
+
+    out.flush()?;
+    Ok(found)
+}
+
+fn is_broken_pipe(e: &anyhow::Error) -> bool {
+    e.chain()
+        .filter_map(|c| c.downcast_ref::<io::Error>())
+        .any(|io| io.kind() == io::ErrorKind::BrokenPipe)
 }
