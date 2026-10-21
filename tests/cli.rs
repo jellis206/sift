@@ -113,3 +113,68 @@ fn pi_session_dir_override_wins() {
         .assert()
         .code(1);
 }
+
+const NEWEST: [&str; 8] = [
+    "review typed after import",
+    "Revisión del \"código\" ✓ REVIEW",
+    "review the implementation",
+    "review the pi branch",
+    "review the codex plan",
+    "go ahead and review the changes and draft a PR",
+    "review from history only",
+    "review without a clock",
+];
+
+#[test]
+fn sort_merges_sources_by_time_untimed_as_oldest() {
+    assert_eq!(prompts(&["review", "--sort", "newest"]), NEWEST);
+    let mut oldest = NEWEST;
+    oldest.reverse();
+    assert_eq!(prompts(&["review", "--sort", "oldest"]), oldest);
+}
+
+#[test]
+fn limit_defaults_to_newest_and_respects_sort() {
+    assert_eq!(prompts(&["review", "-n", "3"]), NEWEST[..3]);
+    assert_eq!(
+        prompts(&["review", "--limit", "2", "--sort", "oldest"]),
+        ["review without a clock", "review from history only"]
+    );
+}
+
+#[test]
+fn since_drops_old_and_untimed_prompts() {
+    let all_timed = prompts(&["review", "--since", "1000000d"]);
+    assert_eq!(all_timed.len(), NEWEST.len() - 1);
+    assert!(!all_timed.contains(&"review without a clock".to_string()));
+    sift(&["review", "--since", "1s"]).assert().code(1);
+    sift(&["review", "--since", "7y"])
+        .assert()
+        .code(2)
+        .stderr(predicates::str::contains("unit must be"));
+}
+
+#[test]
+fn json_lines() {
+    let out = stdout(&["-x", "-p", "review", "--json", "--sort", "oldest"]);
+    let rows: Vec<serde_json::Value> = out
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert_eq!(rows.len(), 4);
+    assert_eq!(
+        rows[0],
+        serde_json::json!({
+            "source": "codex",
+            "timestamp": "2026-10-19T08:53:20Z",
+            "session_id": "33333333-3333-3333-3333-333333333333",
+            "text": "review from history only",
+        })
+    );
+    assert_eq!(rows[2]["source"], "pi");
+    assert_eq!(rows[2]["text"], "review the pi branch\nand its tests");
+    assert_eq!(
+        rows[2]["session_id"],
+        "44444444-4444-4444-4444-444444444444"
+    );
+}

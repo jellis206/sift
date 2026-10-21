@@ -34,6 +34,7 @@ pub fn scan(emit: Emit) -> Result<()> {
     };
 
     for path in super::jsonl_files(&[dir]) {
+        let id = super::session_id(&path);
         super::each_line(&path, &mut |line| {
             if !super::maybe_user_message(line) {
                 return Ok(());
@@ -55,8 +56,9 @@ pub fn scan(emit: Emit) -> Result<()> {
             }
             emit(Prompt {
                 source: Source::Pi,
-                text,
                 timestamp: timestamp.as_deref().and_then(super::parse_time),
+                session_id: id.map(str::to_string),
+                text,
             })
         })?;
     }

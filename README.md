@@ -11,7 +11,17 @@ sift -a review pr               # every term, any order
 sift review --not draft         # exclude; repeatable, phrases work: --not "already merged"
 sift -c review                  # Claude Code only; -x Codex, -p Pi, combinable (default: all)
 sift review --no-color          # color is also off when piped or NO_COLOR is set
+
+sift review -n 20               # 20 newest matches, newest first
+sift review --sort oldest       # sort everything by time (newest | oldest)
+sift review --since 7d          # only the last 7 days (s, m, h, d, w)
+sift review --json              # one JSON object per line: source, timestamp, session_id, text
 ```
+
+Without `--sort` or `-n`, results stream as they're found, grouped by source,
+which gives the fastest first result. With them, sources are merged by time.
+Prompts with no timestamp count as oldest, and `--since` drops them. `-n`
+keeps only N results in memory no matter how many prompts match.
 
 Exit status is grep-style: 0 matched, 1 no match, 2 error.
 
@@ -26,8 +36,7 @@ Exit status is grep-style: 0 matched, 1 no match, 2 error.
 Only prompts you typed are shown. Agent-injected context such as
 `<environment_context>`, `<skill>` expansions, and AGENTS.md is skipped. So are
 Codex threads imported from Claude Code, since those prompts already come from
-Claude, and Codex `history.jsonl` entries that duplicate a session file. Output
-is grouped by source and roughly chronological within each source.
+Claude, and Codex `history.jsonl` entries that duplicate a session file.
 
 ## Privacy
 

@@ -80,8 +80,9 @@ pub fn scan(emit: Emit) -> Result<()> {
             }
             emit(Prompt {
                 source: Source::Codex,
-                text,
                 timestamp,
+                session_id: id.map(str::to_string),
+                text,
             })
         })?;
     }
@@ -91,14 +92,18 @@ pub fn scan(emit: Emit) -> Result<()> {
         let Ok(entry) = serde_json::from_slice::<HistoryEntry>(line) else {
             return Ok(());
         };
-        if entry.session_id.is_some_and(|id| sessions.contains(&id)) || entry.text.trim().is_empty()
-        {
+        let duplicate = entry
+            .session_id
+            .as_ref()
+            .is_some_and(|id| sessions.contains(id));
+        if duplicate || entry.text.trim().is_empty() {
             return Ok(());
         }
         emit(Prompt {
             source: Source::Codex,
-            text: entry.text,
             timestamp: entry.ts.and_then(|ts| DateTime::from_timestamp(ts, 0)),
+            session_id: entry.session_id,
+            text: entry.text,
         })
     })
 }

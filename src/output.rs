@@ -7,9 +7,24 @@ use crate::sources::Prompt;
 const MARKER: &str = ">>>> ";
 const INDENT: &str = "     ";
 
+pub enum Format {
+    Text { color: bool },
+    Json,
+}
+
+pub fn print(out: &mut impl Write, prompt: &Prompt, format: &Format) -> io::Result<()> {
+    match *format {
+        Format::Text { color } => print_text(out, prompt, color),
+        Format::Json => {
+            serde_json::to_writer(&mut *out, prompt)?;
+            writeln!(out)
+        }
+    }
+}
+
 /// Writes a header line, the prompt with continuation lines indented under
 /// the `>>>>` marker, then a blank separator line.
-pub fn print(out: &mut impl Write, prompt: &Prompt, color: bool) -> io::Result<()> {
+fn print_text(out: &mut impl Write, prompt: &Prompt, color: bool) -> io::Result<()> {
     let (head, dim, reset) = if color {
         ("\x1b[1;36m", "\x1b[2m", "\x1b[0m")
     } else {

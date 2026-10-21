@@ -8,9 +8,10 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Source {
     Claude,
     Codex,
@@ -27,11 +28,14 @@ impl Source {
     }
 }
 
-/// A user-authored prompt, normalized across agents.
+/// A user-authored prompt, normalized across agents. Serializes as one
+/// `--json` output line.
+#[derive(Serialize)]
 pub struct Prompt {
     pub source: Source,
-    pub text: String,
     pub timestamp: Option<DateTime<Utc>>,
+    pub session_id: Option<String>,
+    pub text: String,
 }
 
 /// Receives each prompt a source finds; an error stops the scan.

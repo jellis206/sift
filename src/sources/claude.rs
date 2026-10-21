@@ -9,6 +9,8 @@ use super::{Emit, Prompt, Source};
 struct Entry {
     display: String,
     timestamp: Option<i64>,
+    #[serde(rename = "sessionId")]
+    session_id: Option<String>,
 }
 
 /// Streams prompts from `$CLAUDE_CONFIG_DIR/history.jsonl` (default
@@ -26,8 +28,9 @@ pub fn scan(emit: Emit) -> Result<()> {
         }
         emit(Prompt {
             source: Source::Claude,
-            text: entry.display,
             timestamp: entry.timestamp.and_then(DateTime::from_timestamp_millis),
+            session_id: entry.session_id,
+            text: entry.display,
         })
     })
 }
