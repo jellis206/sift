@@ -1,8 +1,14 @@
 use assert_cmd::Command;
 
+const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
+
+/// Every source is pinned to fixtures so real histories never leak in.
 fn sift(args: &[&str]) -> Command {
     let mut cmd = Command::cargo_bin("sift").unwrap();
-    cmd.env("CLAUDE_CONFIG_DIR", concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/claude"))
+    cmd.env("CLAUDE_CONFIG_DIR", format!("{FIXTURES}/claude"))
+        .env("CODEX_HOME", format!("{FIXTURES}/codex"))
+        .env("PI_CODING_AGENT_DIR", format!("{FIXTURES}/pi"))
+        .env_remove("PI_CODING_AGENT_SESSION_DIR")
         .env("TZ", "UTC")
         .env_remove("NO_COLOR")
         .args(args);
@@ -13,9 +19,18 @@ fn stdout(args: &[&str]) -> String {
     String::from_utf8(sift(args).assert().success().get_output().stdout.clone()).unwrap()
 }
 
+/// First line of each result.
+fn prompts(args: &[&str]) -> Vec<String> {
+    stdout(args)
+        .lines()
+        .filter_map(|l| l.strip_prefix(">>>> "))
+        .map(str::to_string)
+        .collect()
+}
+
 #[test]
 fn formats_multiline_and_skips_bad_records() {
-    let out = stdout(&["review"]);
+    let out = stdout(&["-c", "review"]);
     assert_eq!(
         out,
         "CLAUDE · 2026-10-19 16:02\n\
@@ -32,19 +47,69 @@ fn formats_multiline_and_skips_bad_records() {
 
 #[test]
 fn and_or_not() {
-    let headers = |args: &[&str]| stdout(args).matches(">>>>").count();
-    assert_eq!(headers(&["draft", "unrelated"]), 2);
-    assert_eq!(headers(&["-a", "review", "plan"]), 1);
-    assert_eq!(headers(&["-c", "review", "--not", "draft", "--not", "clock"]), 2);
-    assert_eq!(headers(&["--and", "código", "review"]), 1);
+    let count = |args: &[&str]| prompts(args).len();
+    assert_eq!(count(&["-c", "draft", "unrelated"]), 2);
+    assert_eq!(count(&["-c", "-a", "review", "plan"]), 1);
+    assert_eq!(
+        count(&["-c", "review", "--not", "draft", "--not", "clock"]),
+        2
+    );
+    assert_eq!(count(&["-c", "--and", "código", "review"]), 1);
 }
 
 #[test]
-fn no_match_exits_1_and_missing_history_is_not_an_error() {
+fn codex_skips_injected_imported_and_duplicate_prompts() {
+    assert_eq!(
+        prompts(&["-x", "review"]),
+        [
+            "review the codex plan",
+            "review typed after import",
+            "review from history only"
+        ]
+    );
+}
+
+#[test]
+fn pi_keeps_typed_text_only() {
+    let out = stdout(&["-p", "review"]);
+    assert_eq!(
+        out,
+        "PI · 2026-10-20 12:00\n>>>> review the pi branch\n     and its tests\n\n"
+    );
+}
+
+#[test]
+fn source_flags_combine_and_default_to_all() {
+    let labels = |args: &[&str]| {
+        let mut labels: Vec<String> = stdout(args)
+            .lines()
+            .filter_map(|l| l.split(" · ").next().filter(|_| l.contains(" · ")))
+            .map(str::to_string)
+            .collect();
+        labels.dedup();
+        labels
+    };
+    assert_eq!(labels(&["review"]), ["CLAUDE", "CODEX", "PI"]);
+    assert_eq!(labels(&["-c", "-p", "review"]), ["CLAUDE", "PI"]);
+    assert_eq!(labels(&["-x", "review"]), ["CODEX"]);
+}
+
+#[test]
+fn no_match_exits_1_and_missing_histories_are_not_errors() {
     sift(&["zzz-nothing"]).assert().code(1).stdout("");
     sift(&["review"])
         .env("CLAUDE_CONFIG_DIR", "/nonexistent")
+        .env("CODEX_HOME", "/nonexistent")
+        .env("PI_CODING_AGENT_DIR", "/nonexistent")
         .assert()
         .code(1)
         .stderr("");
+}
+
+#[test]
+fn pi_session_dir_override_wins() {
+    sift(&["-p", "review"])
+        .env("PI_CODING_AGENT_SESSION_DIR", "/nonexistent")
+        .assert()
+        .code(1);
 }

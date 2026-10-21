@@ -432,6 +432,7 @@ dependencies = [
  "assert_cmd",
  "chrono",
  "clap",
+ "memchr",
  "serde",
  "serde_json",
 ]

@@ -5,11 +5,11 @@ mod sources;
 use std::io::{self, BufWriter, IsTerminal, Write};
 use std::process::ExitCode;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 
 use search::Query;
-use sources::claude;
+use sources::{Prompt, claude, codex, pi};
 
 /// Search what you've asked your coding agents.
 #[derive(Parser)]
@@ -23,9 +23,17 @@ struct Cli {
     #[arg(short = 'a', long = "and")]
     all: bool,
 
-    /// Search Claude Code history
+    /// Search Claude Code (combine source flags; default: all sources)
     #[arg(short, long)]
     claude: bool,
+
+    /// Search Codex
+    #[arg(short = 'x', long)]
+    codex: bool,
+
+    /// Search Pi
+    #[arg(short, long)]
+    pi: bool,
 
     /// Exclude prompts containing TERM (repeatable)
     #[arg(long = "not", value_name = "TERM")]
@@ -57,16 +65,23 @@ fn run(cli: Cli) -> Result<bool> {
     let mut out = BufWriter::new(io::stdout().lock());
     let mut found = false;
 
+    let mut emit = |prompt: Prompt| -> Result<()> {
+        if query.matches(&prompt.text) {
+            found = true;
+            output::print(&mut out, &prompt, color)?;
+        }
+        Ok(())
+    };
     // Missing histories are skipped: not every machine has every agent.
-    if let Some(path) = claude::history_path().filter(|p| p.exists()) {
-        claude::scan(&path, &mut |prompt| {
-            if query.matches(&prompt.text) {
-                found = true;
-                output::print(&mut out, &prompt, color)?;
-            }
-            Ok(())
-        })
-        .with_context(|| format!("reading {}", path.display()))?;
+    let every = !(cli.claude || cli.codex || cli.pi);
+    if every || cli.claude {
+        claude::scan(&mut emit)?;
+    }
+    if every || cli.codex {
+        codex::scan(&mut emit)?;
+    }
+    if every || cli.pi {
+        pi::scan(&mut emit)?;
     }
 
     out.flush()?;

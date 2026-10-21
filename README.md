@@ -3,21 +3,31 @@
 A fast, local-first CLI for searching your AI coding-agent prompt history
 (Claude Code, Codex, Pi). Read-only, offline, no index.
 
-Work in progress: Claude Code is supported today; Codex and Pi are next.
-
 ## Usage
 
 ```sh
 sift review pr                  # any term (case-insensitive literals)
 sift -a review pr               # every term, any order
 sift review --not draft         # exclude; repeatable, phrases work: --not "already merged"
-sift -c review                  # Claude Code only
+sift -c review                  # Claude Code only; -x Codex, -p Pi, combinable (default: all)
 sift review --no-color          # color is also off when piped or NO_COLOR is set
 ```
 
 Exit status is grep-style: 0 matched, 1 no match, 2 error.
 
-History is read from `$CLAUDE_CONFIG_DIR/history.jsonl` (default `~/.claude`).
+## Sources
+
+| Agent  | Reads                                                         | Override                                               |
+| ------ | ------------------------------------------------------------- | ------------------------------------------------------ |
+| Claude | `~/.claude/history.jsonl`                                     | `CLAUDE_CONFIG_DIR`                                    |
+| Codex  | `~/.codex/{sessions,archived_sessions}/**/*.jsonl`, `history.jsonl` | `CODEX_HOME`                                     |
+| Pi     | `~/.pi/agent/sessions/**/*.jsonl`                             | `PI_CODING_AGENT_SESSION_DIR`, `PI_CODING_AGENT_DIR`   |
+
+Only prompts you typed are shown. Agent-injected context such as
+`<environment_context>`, `<skill>` expansions, and AGENTS.md is skipped. So are
+Codex threads imported from Claude Code, since those prompts already come from
+Claude, and Codex `history.jsonl` entries that duplicate a session file. Output
+is grouped by source and roughly chronological within each source.
 
 ## Privacy
 

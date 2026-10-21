@@ -1,0 +1,6 @@
+{"type":"session","version":3,"id":"44444444-4444-4444-4444-444444444444","timestamp":"2026-10-20T12:00:00.000Z","cwd":"/p"}
+{"type":"message","id":"a","parentId":null,"timestamp":"2026-10-20T12:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"review the pi branch"},{"type":"text","text":"and its tests"}],"timestamp":1792497601000}}
+{"type":"message","id":"b","parentId":"a","timestamp":"2026-10-20T12:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"review complete"}]}}
+{"type":"message","id":"c","parentId":"b","timestamp":"2026-10-20T12:00:03.000Z","message":{"role":"toolResult","content":[{"type":"text","text":"review output"}]}}
+{"type":"message","id":"d","parentId":"c","timestamp":"2026-10-20T12:00:04.000Z","message":{"role":"user","content":[{"type":"text","text":"<skill name=\"review\" location=\"/s\">\nreview skill body\n</skill>"}]}}
+{"type":"message","id":"e","parentId":"d","timestamp":"2026-10-20T12:00:05.000Z","message":{"role":"user","content":[{"type":"image","data":"x"}]}}
